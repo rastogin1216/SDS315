@@ -1,0 +1,330 @@
+---
+title: "Homework 2"
+author: "Nishka Rastogi"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+
+
+library(tidyverse)
+library(ggplot2)
+bikes <- read.csv("bikeshare.csv")
+billboard <- read.csv("billboard.csv")
+capmetro <- read.csv("capmetro_UT.csv")
+profs <- read.csv("profs.csv")
+
+```
+
+Name: Nishka Rastogi
+
+UT EID: nr26674
+
+GitHub Link: <https://github.com/rastogin1216/SDS315.git>
+
+## Problem 1: Beauty, or not, in the Classroom
+
+### Part A
+
+```{r}
+
+profs |>
+  ggplot() + geom_histogram(aes(x = eval),color = "black",binwidth = .2, center = .1) + 
+  labs(
+    
+    title = "Histogram of Course Evaluation Scores",
+    x = "average course evaluation scores (1-5)",
+    y = "count"
+  )
+
+
+```
+
+The distribution of UT Austin professors' average course evaluation scores is slightly left skewed and roughly unimodal. The mean course evaluation score was about `r mean(profs$eval)`, and the standard deviation was approximately `r sd(profs$eval)`.
+
+### Part B
+
+```{r}
+
+profs |>
+  ggplot() + geom_boxplot(aes(x = native,y=eval)) +
+  labs(
+    title = "Distribution of Course Evaluation Scores for Non-Native English Speakers and Native English Speakers",
+    x = "Is the Professor a Native English Speaker?",
+    y = "Course Evaluation Scores"
+    
+    
+  ) 
+
+
+
+```
+
+```{r, eval = F}
+native <- profs |>
+  filter(native == "yes") 
+
+nonnative <- profs |>
+  filter(native == "no") 
+
+fivenum(native$eval)
+fivenum(nonnative$eval)
+  
+
+```
+
+The median course evaluation score for native English-speaking UT professors was 4.0, while the median course evaluation score for non-native English-speaking UT professors was 3.6. Additionally, the distribution of course evaluation scores for native English-speaking UT professors ranged from a score of 2.1 to a perfect score of 5.0. On the other hand, the distribution of course evaluation scores for non-native English-speaking UT professors ranged from a score of 2.7 to 4.6. Thus, the range of course evaluation scores for native English speakers was exactly 1.0 greater than the range of course evaluation scores for non-native English speakers.
+
+### Part C
+
+```{r}
+
+profs |>
+  ggplot() + geom_histogram(aes(x = eval),color = "black",binwidth = .2, center = .1) +
+	  facet_wrap(~gender, nrow = 2) +
+  labs(
+    title = "Course Evaluation Score Distribution by Sex ",
+    x = "average course evaluation scores (1-5)",
+    y= "count"
+    
+  )
+
+female <- profs |>
+  filter(gender == "female")
+male <- profs |>
+  filter(gender == "male")
+
+
+```
+
+The distribution of course evaluation scores for female UT professors and the distribution of course evaluation scores for male UT professors are both left-skewed. Additionally, the mean course evaluation score for female UT professors (`r mean(female$eval)`) is less than that for male UT professors (`r mean(male$eval)`). Thus, male UT professors have a slightly higher mean course evaluation score than female professors at UT.
+
+### Part D
+
+```{r}
+
+profs |>
+  ggplot() + geom_point(aes(x = beauty, y = eval)) +
+  labs(
+    title = "Relationship between Professor Attractiveness and Course Evaluation Score",
+    x = "professor's physical attractiveness",
+    y= "average course evaluation scores (1-5)"
+    
+    
+  )
+  
+  
+
+```
+
+There is a very weak correlation between a UT professor's physical attractiveness rating and their average course evaluations score. The weak positive relationship is demonstrated by the correlation coefficient of `r cor(profs$beauty,profs$eval)`. Thus, we cannot say there is an evident association between a UT professor's beauty score and their average course evaluation score.
+
+## Problem 2: Bike Sharing
+
+### Plot A
+
+```{r}
+
+avgHourlyRentals <- bikes |>
+  group_by(hr) |>
+  summarize(avg_rentals = mean(total)) 
+
+
+avgHourlyRentals |>
+  ggplot() + geom_line(aes(x = hr,y = avg_rentals)) +
+  labs(
+    title = "Average Bike Rentals by the Hour",
+    y = "average bike rentals",
+    x = "hour of day"
+  )
+  
+
+
+
+```
+
+The average number of bike rentals start increasing at a fast rate at around 4 AM, reaching a relative peak of about 350 bike rentals at 8 AM. The rentals then fluctuate slightly for a few hours until increasing quickly to about 450 bike rentals at 5 PM. Then, the rentals decrease moderately fast until the end of the day. Thus, the average amount of bike rentals spikes at 8 AM and 5 PM, which can be explained by people starting their morning commute to work or school and their evening commute after class or work.
+
+### Plot B
+
+```{r}
+
+workdayHourlyRentals <- bikes |>
+  mutate(workingday = ifelse(workingday == 1, "Working Day", "Non-Working Day"))|>
+  group_by(hr,workingday) |>
+  summarize(avg_rentals = mean(total)) 
+
+
+workdayHourlyRentals |>
+  ggplot() + geom_line(aes(x = hr,y = avg_rentals)) +
+	  facet_wrap(~workingday, nrow = 2) +
+  labs(
+    title = "Average Bike Rentals by the Hour for Working Days and Non-working Days",
+    y = "average bike rentals",
+    x = "hour of day"
+  )
+  
+
+```
+
+For non-working days, the average number of bike rentals has a smooth peak at around 350 bike rentals between 12 PM and 3PM. In contrast, for working days, the average number of bike rentals spike up to about 450 rentals at around 8 AM and then spikes another time to about 500 rentals at 5 PM. Additionally, the non-working day graph has very curved edges, rather than spikes, depicting gradual changes in bike rentals over time. Therefore, average bike rentals on non-working days change gradually over time while average bike rentals on working days clearly spike at 8 AM and 5 PM.
+
+### Plot C
+
+```{r}
+
+
+weather9AmRentals <- bikes |>
+  filter(hr == 9) |>
+  mutate(weathersit = case_when(
+    weathersit == 1 ~ "Clear/Partly Cloudy",
+    weathersit == 2 ~ "Mist/Cloudy",
+    weathersit == 3 ~ "Light Snow/Rain",
+    weathersit == 4 ~ "Heavy Rain/Snow"),workingday = ifelse(workingday == 1, "Working Day", "Non-Working Day")) |>
+  group_by(weathersit,workingday) |>
+  summarize(avg_rentals = mean(total)) 
+
+
+weather9AmRentals |>
+  ggplot() + geom_bar(aes(x = weathersit,y = avg_rentals),stat = "identity") +
+	  facet_wrap(~workingday, nrow = 2) +
+  labs(
+    title = "Average Bike Rentals at 9 AM for Working Days and Non-working Days",
+    y = "average bike rentals",
+    x = "weather"
+  )
+
+```
+
+On non-working days when the weather is lightly snowing or raining, the average amount of bike rentals is lower, about 75 rentals, compared to days when the weather is clear or cloudy. This pattern is similar for working days, but the average amount of rentals is about twice as much (about 150 rentals). Additionally, working days with clear conditions and misty or cloudy conditions have similar amounts of average bike rentals. However, for non-working days, days with clear conditions have slightly higher average bike rentals. Thus, on working days, people are more likely to rent bikes, even in compromised weather conditions.
+
+## Problem 3: CapMetro UT Ridership
+
+### Part 1
+
+```{r}
+
+# citing evidence means specific statistics or ranges, informative caption?
+capmetro = mutate(capmetro,
+day_of_week = factor(day_of_week,
+levels=c("Mon", "Tue", "Wed","Thu", "Fri", "Sat", "Sun")),
+month = factor(month,
+levels=c("Sep", "Oct","Nov")))
+
+boardingTimes <- capmetro |>
+  group_by(hour_of_day,day_of_week,month) |>
+  summarize(avg_board = mean(boarding))
+
+boardingTimes |>
+  ggplot() + geom_line(aes(x = hour_of_day,y = avg_board, color = month)) +
+	  facet_wrap(~day_of_week) +
+   labs(
+    title = "Average Boardings by Hour of Day, Week, and Month",
+    y = "average boardings",
+    x = "hour of day"
+  )
+
+
+```
+
+The figure shows the average number of passengers boarding Capital Metro buses on UT campus by hour of day, day of week, and by month (September to November) in 2018. The hour of peak is broadly similar on weekdays, occurring between 3 and 5 PM. I think that the average number of passengers boarding Capital Metro buses on UT campus on a Monday is significantly lower in September compared to other months and days due to Labor Day, a national holiday, falling on the first Monday of September. Thus, no classes are held that day, so students don't need to take the bus to go to campus, causing the average number of boardings to be lower on Mondays in September. Similarly, I think the average ridership on Wednesdays, Thursdays, and Fridays looks lower because of students leaving campus to go home on these days before Thanksgiving Break when classes are canceled the whole week. Consequently, this results in a drop as students leave for home or reduce on-campus travel.
+
+### Part 2
+
+```{r}
+
+capmetro |>
+  ggplot() + geom_point(aes(x = temperature,y = boarding, color = weekend),size = 0.8) +
+	  facet_wrap(~hour_of_day) +
+   labs(
+    title = "Relationship between Boardings and Temperature Each Hour of Day",
+    y = "average number of passengers boarding",
+    x = "temperature (Fahrenheit)"
+  )
+
+
+```
+
+The figure depicts the relationship between the number of people boarding Cap Metro buses and the temperature from each hour from 6 AM to 9 based on if it is a weekday or weekend. Based on the figure, keeping hour of day and weekend status constant, temperature does not have a noticeable effect on the average number of UT students riding the bus depicted by the random scatter in each graph.
+
+## Problem 4: Billboard Top 100
+
+### Part A
+
+```{r,eval = F}
+
+billboard |>
+  group_by(performer,song) |>
+  summarize(count = max(weeks_on_chart),.groups = "drop") |>
+  slice_max(count,n=10)
+
+
+```
+
+| Performer                                 | Song                                | Count |
+|-------------------------------------------|-------------------------------------|-------|
+| Imagine Dragons                           | Radioactive                         | 87    |
+| AWOLNATION                                | Sail                                | 79    |
+| Jason Mraz                                | I'm Yours                           | 76    |
+| The Weeknd                                | Blinding Lights                     | 76    |
+| LeAnn Rimes                               | How Do I Live                       | 69    |
+| LMFAO Featuring Lauren Bennett & GoonRock | Party Rock Anthem                   | 68    |
+| OneRepublic                               | Counting Stars                      | 68    |
+| Adele                                     | Rolling In The Deep                 | 65    |
+| Jewel                                     | Foolish Games/You Were Meant For Me | 65    |
+| Carrie Underwood                          | Before He Cheats                    | 64    |
+
+The table shows the top 10 most popular songs from 1958 to about halfway into of 2021, based on the total amount of weeks (count) spent on the Billboard Top 100.
+
+### Part B
+
+```{r}
+
+diversityMeasure <- billboard |>
+  filter(year != 1958 & year != 2021) |>
+  group_by(year,song) |>
+  summarize(count = n(), .groups = "drop") |>
+  group_by(year) |>
+  summarize(unique = n(), .groups = "drop")
+
+diversityMeasure |>
+  ggplot() + geom_line(aes(x = year,y=unique)) +
+  labs(
+    title = "Musical Diversity of the Billboard Top 100 Over Time",
+    x = "year",
+    y = "number of unique songs")
+  
+```
+
+The number of unique songs that appeared in the Billboard Top 100 spiked to about 800 songs around 1965. After that year, the number of unique songs was generally declining at a fast rate, hitting its lowest at around 380 unique songs around 2001. From there, there has been fluctuations in the number of unique songs, but it has generally spiked to about 790 songs in 2020.
+
+### Part C
+
+```{r}
+
+billboard |>
+  filter(weeks_on_chart >= 10) |>
+  group_by(performer,song) |>
+  summarize(weeks = n(), .groups = "drop") |>
+  group_by(performer) |>
+  summarize(hits = n(), .groups = "drop") |>
+  filter(hits >= 30) |>
+  ggplot() + geom_bar(aes(x = performer,y = hits),stat = "identity") +
+  labs(
+    title = "Artists With at Least Thirty 10-Week Hits",
+    x = "artist",
+    y = "number of 10-week hits"
+  ) +
+  coord_flip()
+  
+
+```
+
+This visual depicts the 19 artists since 1958 who have had at least 30 songs that have appeared on the Billboard Top 100 for at least 10 weeks. It shows how many 10-week hits each of these artists have had in their musical career.
