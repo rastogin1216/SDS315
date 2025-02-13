@@ -1,0 +1,196 @@
+---
+title: "Homework 3"
+author: "Nishka Rastogi"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F,eval = F)
+
+library(tidyverse)
+library(mosaic)
+library(ggplot2)
+
+gas <- read.csv("gasprices.csv")
+sclass <- read.csv("sclass.csv")
+ebay <- read.csv("ebay.csv")
+pilot <- read.csv("nbc_pilotsurvey.csv")
+```
+
+Name: Nishka Rastogi
+
+UT EID: nr26674
+
+GitHub Link: <https://github.com/rastogin1216/SDS315>
+
+## Problem 1
+
+### Theory A
+
+```{r}
+
+gas_comp = do(10000)*diffmean(Price ~ Competitors, data=resample(gas))
+
+confint(gas_comp, level = 0.95)
+  
+```
+
+This theory claims that gas stations charge more if they lack direct competition in sight. We are 95% confident that the true difference in mean gas prices between all gas stations in Austin that do and don't have a competitor in sight is somewhere between about -5 cents and 1 cent. Because zero is a plausible value in this interval, the interval lacks statistical significance. Additionally, the numbers within the interval are very small, meaning that the true difference in mean prices is quite trivial and lacks practical significance. Thus, there is not convincing evidence that this theory is true.
+
+### Theory B
+
+```{r}
+
+
+gas2 <- gas |>
+  mutate(above_med = (Income >= median(Income)))
+
+gas_income = do(10000)*diffmean(Price ~ above_med, data=resample(gas2))
+confint(gas_income, level = 0.95)
+
+```
+
+The theory is that the richer the area, the higher the gas prices. We categorized wealthy as an area with a median household income of the zip code greater than or equal to the sample median income. We are 95% confident that the true difference in mean prices of gas between all gas stations in Austin in wealthy and non-wealthy areas is between about 0 and 6 cents, with the lower bound rounded down to 0. Because zero is not in this confidence interval, the true difference in mean gas prices is statistically significant at the 5% level. However, the practical significance is lacking as the difference, according to the confidence interval, is likely very small. There is convincing evidence that supports this theory.
+
+### Theory C
+
+```{r}
+
+gas_light = do(10000)*diffmean(Price ~ Stoplight, data=resample(gas))
+
+confint(gas_light, level = 0.95)
+
+
+```
+
+The theory is that gas stations at stoplights charge more than gas stations not at a stoplight. The true difference in mean gas prices for all gas stations in Austin that are at and not at a stoplight is somewhere between -4 cents and 3 cents, with 95% confidence. The difference is not statistically significant as zero is a plausible value, and even then, all the values within this interval are very small, indicating a lack of practical significance. Therefore, there is not convincing evidence to support this theory.
+
+### Theory D
+
+```{r}
+#HELP
+
+gas_highway = do(10000)*diffmean(Price ~ Highway, data=resample(gas))
+
+confint(gas_highway, level = 0.95)
+
+
+```
+
+The theory is that gas stations with direct highway access charge more. The true difference in mean prices between all gas stations in Austin with and without direct highway access is somewhere between about \$0.01 and \$0.08, with 95% confidence. Although the difference is statistically significant as zero is not a plausible value, the true difference in mean prices is subjectively quite small, so the difference lacks practical significance. There is convincing evidence, however, that this theory is true due to its statistical significance.
+
+### Theory E
+
+```{r}
+
+
+shell1 <- gas |>
+  mutate(shell = (Name == "Shell")) 
+
+
+gas_shell = do(10000)*diffmean(Price ~ shell, data=resample(shell1))
+
+confint(gas_shell, level = 0.95)
+
+
+```
+
+This theory claims that Shell charges more than all other non-Shell brands. The true difference in mean gas prices for all Shell and non-Shell gas stations in Austin is somewhere between -1 cents and 6 cents. The resulting difference is not statistically significant because 0 is a plausible value, and additionally, the true difference in mean gas prices is in terms of very small numbers; thus, the interval lacks both practical and statistical significance. There is not convincing evidence that Shell charges more than all other non-Shell brands in the Austin area.
+
+## Problem 2
+
+### Part A
+
+```{r}
+
+filtered_sclass <- sclass |>
+  filter(year == 2011, trim == "63 AMG")
+
+boot_sclass = do(10000)*mean(~mileage, data=resample(filtered_sclass))
+
+confint(boot_sclass, level=0.95)
+```
+
+We are 95% confident that the true average mileage of all 2011 S-Class 63 AMGs that were hitting the used-car market is between about 26240.87 and 31799.36 miles.
+
+### Part B
+
+```{r}
+sclass2 <- sclass |>
+  filter(year == 2014, trim == "550") |>
+  mutate(isBlack = (color == "Black"))
+
+boot_sclass2 = do(10000)*prop(~isBlack, data=resample(sclass2))
+
+confint(boot_sclass2, level = 0.95)
+```
+
+We are 95% confident that the true proportion of all 2014 S-Class 550s that were painted black is between 0.417 and 0.453.
+
+## Problem 3
+
+### Part A
+
+```{r}
+
+pilot_filtered <- pilot |>
+  filter(Show == "Living with Ed" | Show == "My Name is Earl")
+
+boot_diff_happy = do(10000)*diffmean(Q1_Happy ~ Show, data=resample(pilot_filtered))
+
+confint(boot_diff_happy, level = 0.95)
+```
+
+Does *Living with Ed* produce consistently higher mean happiness response among viewers than *My Name is Earl*? To answer this question, I created 10,000 bootstrap samples from the original data frame, and for each bootstrap sample, I recomputed the difference in the means of the happiness response among viewers between the two shows. I was able to form my confidence interval from this distribution of the difference in mean happiness responses. We are 95% confident that the true difference in mean viewer response associated with happiness for all American TV viewers between *Living with Ed* and *My Name is Earl* is somewhere between -0.395 and 0.101. There is not convincing evidence that one show consistently produces a higher mean happiness response among viewers because the 95% confidence interval for this difference contains zero; therefore, the difference is not statistically significant at the 0.05 level.
+
+### Part B
+
+```{r}
+
+pilot_filtered2 <- pilot |>
+  filter(Show == "The Biggest Loser" | Show == "The Apprentice: Los Angeles")
+  
+
+boot_diff_annoy = do(10000)*diffmean(Q1_Annoyed ~ Show, data=resample(pilot_filtered2))
+
+confint(boot_diff_annoy, level = 0.95)
+
+```
+
+Which reality show, *The Biggest Loser* or *The Apprentice: Los Angeles*, made people feel more annoyed? We constructed 10,000 bootstrap samples from the original data frame, and for each bootstrap sample, we recomputed the difference in the means of the annoyance response among viewers between the two shows. I formed my confidence interval from this distribution of the difference in mean annoyance responses. The true difference in mean annoyance responses of all American TV viewers for *The Biggest Loser and The Apprentice: Los Angeles* is somewhere between -0.518 and -0.017. There is convincing evidence that *The Apprentice: Los Angeles* consistently produces a higher mean viewer response associated with annoyance than *The Biggest Loser*. This is because the 95% confidence interval for that difference fails to contain zero, so the difference in mean annoyance viewer response between the two shows is statistically significant at the 5% level.
+
+### Part C
+
+```{r}
+
+pilot_dance <- pilot |>
+  filter(Show == "Dancing with the Stars") |>
+  mutate(confused = (Q2_Confusing >= 4))
+
+boot_dance = do(10000)*prop(~confused, data=resample(pilot_dance))
+
+confint(boot_dance, level = 0.95)
+```
+
+What proportion of all American TV watchers would we expect to agree or strongly agree that *Dancing with the Stars* was a confusing show? I created 10,000 bootstrap samples from the original data frame, and for each bootstrap sample, I recomputed the proportion of American TV viewers that gave a response of 4 or greater to the “Q2_Confusing” question. I was able to make my confidence interval from this distribution of proportions. We are 95% confident that the true proportion of viewers who agreed or strongly agreed that *Dancing with the Stars* was a confusing show is between 3.87% and 12.15%. Thus, a small percentage of viewers struggle with understanding the show.
+
+## Problem 4
+
+```{r}
+
+ebay2 <- ebay |>
+  mutate(rev_ratio = rev_after/rev_before)
+
+boot_ebay = do(10000)*diffmean(rev_ratio ~ adwords_pause, data=resample(ebay2))
+
+confint(boot_ebay, level = 0.95)
+
+```
+
+Does pausing advertising on Google AdWords for a whole designated market area affect eBay's ratio of revenue? We created 10,000 bootstrap samples from the original ebay data frame, and for each bootstrap sample, we recomputed the difference in the means of the revenue ratio between the treatment and control groups. We utilized these differences in mean revenue ratio to create a 95% confidence interval. We are 95% confident that the true difference in the mean ratio of revenue after to revenue before between the treatment group, where advertising on Google AdWords was paused, and the control group is somewhere between -0.09 and -0.01. The revenue ratio in the treatment group is consistently lower than the revenue ratio in the control group; the confidence interval doesn't contain zero, so the difference is statistically significant at the 5% level. Therefore, there is convincing evidence that paid search results do generate additional revenue for eBay.
