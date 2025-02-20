@@ -1,0 +1,200 @@
+---
+title: "Homework 4"
+author: "Nishka Rastogi"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+library(tidyverse)
+library(mosaic)
+library(ggplot2)
+letter <- read.csv("letter_frequencies.csv")
+```
+
+Name: Nishka Rastogi
+
+UT EID: nr26674
+
+GitHub Link: <https://github.com/rastogin1216/SDS315>
+
+## Problem 1 - Iron Bank
+
+```{r}
+
+sim_bank = do(100000)*nflip(n=2021, prob=0.024)
+
+  ggplot(sim_bank) + 
+    geom_histogram(aes(x=nflip), binwidth=1) + 
+    geom_vline(xintercept = 70, color = "black", size = 0.75) + 
+    labs(title = "Probability Distribution",
+         x = "flagged trades")
+pvalue1 = sum(sim_bank >= 70) / 100000
+```
+
+Our null hypothesis is that on average over the long run, securities trades from the Iron Bank are flagged at a baseline rate of 2.4%, the same as other traders. Our test statistic in our data is the 70 of 2021 securities trades from the Iron Bank that were flagged. Assuming that the null hypothesis is true, we created a probability distribution of the test statistic to assess whether the hull hypothesis seemed capable of explaining the observed test statistic. Our p-value is extremely small (p = 0.002), which represents the probability that at least 70 securities trades out of the last 2021 is actually observed, given that the null hypothesis is true. This suggests that the higher number of flagged securities trades from the Iron Bank cannot be attributed to random chance. Thus, there is statistically significant evidence that securities trades from the Iron Bank are flagged at a rate greater than the 2.4% baseline rate as that of other traders, so further investigation into the Iron Bank's trades is necessary.
+
+## Problem 2 - Health Inspections
+
+```{r}
+
+
+sim_health = do(100000)*nflip(n=50, prob=0.03)
+
+  ggplot(sim_health) + 
+    geom_histogram(aes(x=nflip), binwidth=1) + 
+    geom_vline(xintercept = 8, color = "black", size = 0.75) + 
+    labs(title = "Probability Distribution",
+         x = "violations")
+pvalue2 = sum(sim_health >= 8) / 100000
+
+
+```
+
+The null hypothesis is that on average, restaurants in the city are cited for health code violations at the same 3% baseline rate. The test statistic in our data is the 8 of 50 inspections that resulted in health code violations being reported at Gourmet Bites restaurants. After simulating 100,000 Monte Carlo simulations under the assumption that the null hypothesis is true, the p-value turned out to be about p = 0.0001, which represents the probability that at least 8 health code violations out of 50 inspections is actually observed (given that the null hypothesis is true).The observed data for Gourmet Bites are not consistent with the Health Department's null hypothesis. Because the p-value is extremely small, we reject the null hypothesis, suggesting that the higher number of health violations at Gourmet Bites cannot be attributed to random chance. Instead, there is statistically significant evidence that raises concern about the health-related issues of Gourmet Bites that should be investigated further.
+
+## Problem 3 - Evaluating Jury Selection for Bias
+
+```{r}
+
+expected_distribution = c(Group1 = 0.3, Group2 = 0.25, Group3 = 0.20, Group4 = 0.15, Group5 = 0.10)
+observed_counts =  c(Group1 = 85, Group2 = 56, Group3 = 59, Group4 = 27, Group5 = 13)
+
+
+chi_squared_statistic = function(observed, expected) {
+  sum((observed - expected)^2 / expected)
+}
+
+# calculate our chi squared stat
+my_chi = chi_squared_statistic(observed_counts, 240*expected_distribution)
+my_chi
+
+
+
+chi_sim = do(100000)*{
+  simulated_counts = rmultinom(1, 240, expected_distribution)
+  this_chi = chi_squared_statistic(simulated_counts, 240*expected_distribution)
+  c(chi = this_chi) 
+}
+
+ggplot(chi_sim) + 
+  geom_histogram(aes(x=chi,fill = chi < my_chi), binwidth=1) + 
+    geom_vline(xintercept = my_chi, color = "black", size = 0.75) + 
+    labs(title = "Chi-Squared Null Distribution",
+         x = "chi-squared statistics") +  
+    theme_minimal() +
+    theme(legend.position = "none")
+
+pvalue3 = sum(chi_sim >= my_chi) / 100000
+
+
+```
+
+The null hypothesis is that the distribution of jurors empaneled by this judge is not significantly different from the county's population proportions. Our chi-square test statistic based on the observed and expected counts of jurors per group was about 12.426. The p-value of about 0.014 represents the probability of obtaining a chi-square test statistic as extreme as 12.426 or more extreme, assuming that the null hypothesis is true. Because the p-value for the Chi-Square test was quite small (p = 0.014), we reject the null hypothesis, which suggests that the distribution of jurors empaneled by this judge is significantly different from the county's population proportions. Therefore, this raises concerns about systematic bias in jury selection. However, an alternate explanation for this may be due to selection bias in the pools of jury, as the jury pool may not be representative of the county. Additionally, the level of oversight of a judge may affect this discrepancy; overly lenient judges may allow challenges and circumstances that other stricter judges wouldn't. Further investigation into the demographics of the pool of jury before the selection process will be truly helpful to answer this question. Investigating deeper into other judges in the same county will allow us to identify if there is a trend within this county.
+
+## Problem 4 - LLM Watermarking
+
+### Part A
+
+```{r}
+
+
+brown_sentences <- readLines("brown_sentences.txt", warn = FALSE)
+
+calculate_chi_squared = function(sentence, freq_table) {
+  
+  # Ensure letter frequencies are normalized and sum to 1
+  freq_table$Probability = freq_table$Probability / sum(freq_table$Probability)
+  
+  # Remove non-letters and convert to uppercase
+  clean_sentence = gsub("[^A-Za-z]", "", sentence)
+  clean_sentence = toupper(clean_sentence)
+  
+  # Count the occurrences of each letter in the sentence
+  observed_counts = table(factor(strsplit(clean_sentence, "")[[1]], levels = freq_table$Letter))
+  
+  # Calculate expected counts
+  total_letters = sum(observed_counts)
+  expected_counts = total_letters * freq_table$Probability
+  
+  # Chi-squared statistic
+  chi_squared_stat = sum((observed_counts - expected_counts)^2 / expected_counts)
+  
+  return(chi_squared_stat)
+}
+
+chi_squared_values <- sapply(brown_sentences, function(sentence) calculate_chi_squared(sentence,letter))
+
+
+hist(chi_squared_values,
+     main = "Chi-Squared Null Distribution (Letter Frequency)",
+     xlab = "Chi-Square Statistics", ylab = "Frequency")
+
+```
+
+This graph displays the null distribution of the chi-square test statistic based on letter frequencies.
+
+### Part B
+
+```{r,}
+ten_sentences <- c(
+  "She opened the book and started to read the first chapter, eagerly anticipating what might come next.",
+  "Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.",
+  "The museum’s new exhibit features ancient artifacts from various civilizations around the world.",
+  "He carefully examined the document, looking for any clues that might help solve the mystery.",
+  "The students gathered in the auditorium to listen to the guest speaker’s inspiring lecture.",
+  "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.",
+  "The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.",
+  "They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.",
+  "The committee reviewed the proposal and provided many points of useful feedback to improve the project’s effectiveness.",
+  "Despite the challenges faced during the project, the team worked tirelessly to ensure its successful completion, resulting in a product that exceeded everyone’s expectations."
+)
+
+
+# Compute chi-squared statistics for the given sentences
+sentence_chi_squared <- sapply(ten_sentences, function(sentence) calculate_chi_squared(sentence, letter))
+
+# Compute p-values based on reference distribution
+p_values <- sapply(sentence_chi_squared, function(x) mean(chi_squared_values >= x))
+
+# Format p-values to 3 decimal places
+p_values <- round(p_values, 3)
+
+# Create and display a table
+p_value_table <- data.frame(Sentence = 1:10, Chi_Squared = round(sentence_chi_squared, 3), P_Value = p_values)
+
+```
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+| Sentences                                                                                                                                                                                                     | Rounded P-Values |
++===============================================================================================================================================================================================================+==================+
+| 1\. She opened the book and started to read the first chapter, eagerly anticipating what might come next.                                                                                                     | 0.513            |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+| 2\. Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.                                                                           | 0.926            |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+| 3\. The museum’s new exhibit features ancient artifacts from various civilizations around the world.                                                                                                          | 0.076            |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+| 4\. He carefully examined the document, looking for any clues that might help solve the mystery.                                                                                                              | 0.489            |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+| 5\. The students gathered in the auditorium to listen to the guest speaker’s inspiring lecture.                                                                                                               | 0.484            |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+| 6\. Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland. | 0.009            |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+| 7\. The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.                                                | 0.328            |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+| 8\. They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.                                                                                                          | 0.988            |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+| 9\. The committee reviewed the proposal and provided many points of useful feedback to improve the\                                                                                                           | 0.084            |
+| project’s effectiveness.                                                                                                                                                                                      |                  |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+| 10\. Despite the challenges faced during the project, the team worked tirelessly to ensure its successful\                                                                                                    | 0.059            |
+| completion, resulting in a product that exceeded everyone’s expectations.                                                                                                                                     |                  |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+
+
+Sentence 6 has been watermarked, as the LLM has subtly adjusted its frequency distribution over letters. The p-value of sentence 6 was quite small (p = 0.009), which represents the probability of obtaining a chi-square test statistic of 96.453 or more extreme, assuming that the sentence follows the typical English letter distribution.Therefore, there is statistically significant evidence that sentence 6 doesn't comply with the typical English letter frequencies.
