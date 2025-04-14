@@ -1,0 +1,136 @@
+---
+title: "Homework 8"
+author: "Nishka Rastogi"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, eval = F, warning = F, message = F)
+library(tidyverse)
+library(mosaic)
+covid <- read.csv("covid.csv")
+creatinine <- read.csv("creatinine.csv")
+milk <- read.csv("milk.csv")
+```
+
+Name: Nishka Rastogi
+
+UT EID: nr26674
+
+GitHub Link: <https://github.com/rastogin1216/SDS315>
+
+# Problem 1
+
+```{r}
+
+model_hr = lm(creatclear ~ age, data=creatinine)
+coef(model_hr)
+```
+
+## Part A
+
+The expected creatinine clearance rate for a 55-year-old patient would be about **113.72 mL/minute**.
+
+I fitted a linear regression model using the data and outputted the intercept and slope of the model.
+
+Our fitted regression model is:
+
+y-hat = 147.81 - 0.62(x)
+
+where y-hat is the predicted creatinine clearance rate and x is the age.
+
+Using this model, I was able to predict the expected creatinine clearance rate for a 55-year-old patient by plugging in 55 as x in our fitting regression model.
+
+y-hat = 147.81 - 0.62(55)
+
+y-hat = 113.72
+
+## Part B
+
+The slope of **-0.62 ml/minute per year** represents the relationship between creatinine clearance rate and age. Therefore, a one-year change in age is associated with a -0.62 ml/minute change in creatinine clearance rate, on average. I determined this by extracting the slope from the generated linear regression model.
+
+y-hat = 147.81 **-** **0.62**(x)
+
+## Part C
+
+The 40-year-old has a creatinine clearance rate that is healthier for their age.
+
+I determined this by calculating the residual for each patient, using their predicted creatinine clearance rates from the linear regression model.
+
+**40-year-old:**
+
+Residual = Actual Value - Predicted Value
+
+Residual = 135 - (147.81 - 0.62(40))
+
+Residual = 11.98
+
+**60-year-old:**
+
+Residual = Actual Value - Predicted Value
+
+Residual = 112- (147.81 - 0.62(60))
+
+Residual = 1.38
+
+Because the 40-year-old has a higher residual than the 60-year-old, the 40-year-old has a creatinine clearance rate that is healthier for their age.
+
+# Problem 2
+
+```{r}
+italy <- covid |>
+  filter(country == "Italy")
+
+spain <- covid |>
+  filter(country == "Spain")
+
+italy_boot = do(10000)*lm(log(deaths) ~ days_since_first_death, data=resample(italy))
+confint(italy_boot, level = 0.95)
+
+spain_boot = do(10000)*lm(log(deaths) ~ days_since_first_death, data=resample(spain))
+confint(spain_boot, level = 0.95)
+```
+
+## Part A
+
+The estimated growth rate for Italy, with 95% confidence, is between 0.159 and 0.209. The doubling time is between about 335.2 and 438.9 days, with 95% confidence.
+
+## Part B
+
+\
+The estimated growth rate for Spain is between 0.235 and 0.317, with 95% confidence. The doubling time is between about 220.8 and 297.9 days, with 95% confidence.
+
+## Part C
+
+```{r, eval = T}
+ggplot(data = covid, aes(x = days_since_first_death, y = deaths, color = country)) +
+  geom_line(size = 1) +
+  labs(
+    title = "Daily COVID-19 Deaths Since First Death",
+    x = "Days Since First Death",
+    y = "Number of Deaths",
+    color = "Country"
+  ) +
+  theme_minimal()
+```
+
+# Problem 3
+
+```{r}
+lm_milk = lm(log(sales) ~ log(price), data=milk)
+coef(lm_milk)
+milk_boot = do(10000)*lm(log(sales) ~ log(price), data=resample(milk))
+confint(milk_boot, level = 0.95)
+
+
+```
+
+The estimated price elasticity of demand for milk is about -1.62, in light of the data; thus, when milk prices increase by 1%, consumers want to buy about 1.62% less of it, on average.
+
+The true price elasticity of demand for milk is between about -1.77 and -1.45, with 95% confidence. I estimated this quantity by creating many fitted regression models on a log-to-log scale. I used the fitted slope of each regression model to determine the elasticity.
