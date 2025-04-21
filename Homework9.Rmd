@@ -1,0 +1,215 @@
+---
+title: "Homework 9"
+author: "Nishka Rastogi"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, eval = F, warning = F, message = F)
+groceries <- read.csv("groceries.csv")
+solder <- read.csv("solder.csv")
+redlining <- read.csv("redlining.csv")
+library(ggplot2)
+library(tidyverse)
+library(moderndive)
+library(effectsize)
+
+```
+
+Name: Nishka Rastogi
+
+UT EID: nr26674
+
+GitHub Link: <https://github.com/rastogin1216/SDS315>
+
+# Problem 1
+
+## Part A
+
+```{r,eval = T}
+
+ggplot(solder, aes(x = Opening, y = skips)) +
+  geom_boxplot() +
+  scale_x_discrete(limits = c("S", "M", "L")) +
+  labs(
+    title = "Number of Solder Skips by Solder Gun Opening Size",
+    x = "Solder Gun Opening Size",
+    y = "Number of Skips"
+  ) 
+
+ggplot(solder, aes(x = Solder, y = skips)) +
+  geom_boxplot() +
+  scale_x_discrete(limits = c("Thin", "Thick")) +
+  labs(
+    title = "Number of Solder Skips by Solder Alloy Thickness",
+    x = "Solder Alloy Thickness",
+    y = "Number of Skips"
+  ) 
+
+
+
+```
+
+The boxplot depicting the distribution of solder skips for different opening sizes of the solder gun provides evidence of a correlation between the number of skips and opening size. The small opening sizes have the greatest median number of skips, followed by the medium and large opening sizes. Thus, there is evidence that a small solder gun opening size is correlated with a higher number of skips, and a large solder gun opening size is correlated with a lower number of skips.
+
+The distribution of skips by solder alloy thickness indicates that the thickness of the solder alloy influences the number of skips. The thin alloy has a greater median number of skips compared to the thick alloy, suggesting that using a thicker solder alloy may be correlated with a lower likelihood of skips.
+
+## Part B
+
+```{r}
+
+solder_model <- lm(skips ~ Solder + Opening + Solder:Opening, data=solder)
+
+get_regression_table(solder_model)
+
+```
+
++-------------------------------+----------------+---------------------+
+|                               | Estimate       | Confidence Interval |
++===============================+================+=====================+
+| **Intercept**                 | 0.393          | [-0.628,1.415]      |
++-------------------------------+----------------+---------------------+
+| **Solder Type: Thin**         | 2.280          | [0.836,3.724]       |
++-------------------------------+----------------+---------------------+
+| **Opening Size: M**           | 2.407          | [0.962,3.851]       |
++-------------------------------+----------------+---------------------+
+| **Opening Size: S**           | 5.127          | [3.682,6.571]       |
++-------------------------------+----------------+---------------------+
+| **Solder Type: Thin**         | -0.740         | [-2.782,1.302]      |
+|                               |                |                     |
+| **Opening Size: M**           |                |                     |
++-------------------------------+----------------+---------------------+
+| **Solder Type: Thin**         | 9.653          | [7.611,11.696]      |
+|                               |                |                     |
+| **Opening Size: S**           |                |                     |
++-------------------------------+----------------+---------------------+
+
+## Part C
+
+The baseline number of skips for thick solder alloys with large solder gun openings is about 0.393.
+
+The main effect for a thin solder type is about 2.280 skips.
+
+The main effect for a medium opening size is about 2.407 skips.
+
+The main effect for a small opening size is about 5.127 skips.
+
+The interaction effect for a thin solder type and medium opening size is approximately -0.740 skips. Therefore, thin solder alloys with a medium solder gun opening yield, on average, 0.740 skips less than what would be expected from summing the individual isolated effects of the variables.
+
+The interaction effect for a thin solder type and small opening size is about 9.653 skips. Thus, thin solder alloys with a small solder gun opening yield, on average, 9.653 skips more than what would be expected from summing the individual isolated effects of the variables.
+
+## Part D
+
+I would recommend using large openings on solder guns with a thick solder alloy, as this combination is statistically associated with the lowest number of skips according to the fitted model. Thus, large openings and thick solder types are associated with the lowest amount of manufacturing defects.
+
+# Problem 2
+
+## Part A
+
+```{r,eval = T}
+
+averages <- groceries |>
+  group_by(Store) |>
+  summarize(avg_price = mean(Price, na.rm = TRUE)) |>
+  arrange(avg_price)
+
+ggplot(averages, aes(x = avg_price, y = reorder(Store, avg_price))) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Average Product Price by Store",
+    x = "Average Price ($)",
+    y = "Store"
+  )
+
+
+```
+
+The bar graph shows that high-end and natural food stores, such as Whole Foods and Natural Grocers, tend to have higher average prices compared to large grocery chains like Walmart. Stores such as Fiesta, Walmart, and Kroger have the lowest average prices across stores. There is a price difference of around 2 dollars between the average price of products at Whole Foods and Fiesta.
+
+## Part B
+
+```{r, eval = T}
+
+products <- groceries |>
+  group_by(Product) |>
+  summarize(num_stores = n()) |>
+  arrange(num_stores)
+  
+  
+ggplot(products, aes(x = num_stores, y = reorder(Product, num_stores))) +
+  geom_col(fill = "darkorange") +
+  labs(
+    title = "Number of Stores Carrying Each Product",
+    x = "Number of Stores",
+    y = "Product")
+```
+
+## Part C
+
+```{r}
+model1 <- lm(Price ~ Product + Type, data = groceries)
+get_regression_table(model1)
+
+```
+
+Compared with ordinary grocery stores (like Albertsons, HEB, or Krogers), convenience stores charge somewhere between\
+(lower bound) and (upper bound) dollars more for the same product.
+
+## Part D
+
+```{r}
+model2 <- lm(Price ~ Product + Store, data = groceries)
+get_regression_table(model2)
+```
+
+Walmart and Kroger Fresh Fare seem to charge the lowest prices when comparing the same product. Whole Foods and Wheatsville Food Co-op seem to charge the highest prices when comparing the same product.
+
+## Part E
+
+Based on the coefficients from the fitted model, it is more likely that Central Market charges more than HEB for the same product. The fitted model suggests that Central Market charges about 7 cents more than HEB for the same product. However, this difference is quite small in a larger context, as other stores differ more from the baseline. Thus, Central Market isn't dramatically more expensive for the same product.
+
+## Part F
+
+```{r}
+#HELP
+groceries <- groceries|>
+  mutate(Income10K = Income / 10000)
+model_income <- lm(Price ~ Product + Income10K, data = groceries)
+get_regression_table(model_income)
+
+standardize_parameters(model_income)
+
+```
+
+Consumers in lower-income ZIP codes tend to pay more for the same product, on average. I know this because the Income10k coefficient is negative, so the average price of the same product decreases by approximately 1.4 cents for every \$10,000 increase in ZIP code income.
+
+A one-standard deviation increase in the income of a ZIP code seems to be associated with a 0.03 standard-deviation decrease in the price that consumers in that ZIP code expect to pay for the same product.
+
+# Problem 3
+
+## Part A
+
+True. The fitted regression model A regarding the relationship between FAIR policies per 100 housing units and the percent of minority residents within a zipcode depicts an increase of about 0.014 FAIR policies for every percent increase in minority residents, with 95% confidence. Additionally, because this confidence interval does not include 0, the positive minority coefficient is statistically significant.
+
+## Part B
+
+Undecidable. The fitted regression model A regarding the relationship between FAIR policies per 100 housing units and the percent of minority residents within a zipcode does not account for the interaction effect between minority percentage and age of housing stock. Thus, we would need a model that assesses an interaction effect between minority percentage and age of housing stock.
+
+## Part C
+
+Undecidable. Looking at figure C1, the fitted regression slope, depicting the relationship between minority percent and FAIR policies, is about the same for both high and low fire risk. Additionally, the 95% confidence interval for the interaction effect between minority percentage and a low fire risk includes 0. Thus, there is no statistically significant evidence of a difference in relationships between minority percentage and number of FAIR policiesfor high and low fire-risk ZIP codes.
+
+## Part D
+
+False. According to model D1, the coefficient of minority without accounting for income is in between 0.009 and 0.018, with 95% confidence. Controlling for income in model D2 yields a minority coefficient is between 0.004 and 0.015, with 95% confidence. Thus, when we control for income, the relationship between the minority percentage and FAIR policies is somewhat weakened, so we cannot say that income explains all of this association.
+
+## Part E
+
+True. Using model E, which controlled for income, fire risk, and housing age, the minority coefficient is between 0.003 and 0.014, with 95% confidence. Because the confidence interval does not include 0, the positive minority coefficient is statistically significant. Therefore, minority percentage and number of FAIR policies are still associated, even after\
+controlling for income, fire risk, and housing age.
